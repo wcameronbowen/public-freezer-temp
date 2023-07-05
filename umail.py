@@ -38,7 +38,7 @@ class SMTP:
         assert code==220, 'cant connect to server %d, %s' % (code, resp)
         self._sock = sock
 
-        code, resp = self.cmd(CMD_EHLO + ' ' + LOCAL_DOMAIN)
+        code, resp = self.cmd(f'{CMD_EHLO} {LOCAL_DOMAIN}')
         assert code==250, '%d' % code
         if not ssl and CMD_STARTTLS in resp:
             code, resp = self.cmd(CMD_STARTTLS)
@@ -50,7 +50,7 @@ class SMTP:
 
     def login(self, username, password):
         self.username = username
-        code, resp = self.cmd(CMD_EHLO + ' ' + LOCAL_DOMAIN)
+        code, resp = self.cmd(f'{CMD_EHLO} {LOCAL_DOMAIN}')
         assert code==250, '%d, %s' % (code, resp)
 
         auths = None
@@ -62,31 +62,31 @@ class SMTP:
         from ubinascii import b2a_base64 as b64
         if AUTH_PLAIN in auths:
             cren = b64("\0%s\0%s" % (username, password))[:-1].decode()
-            code, resp = self.cmd('%s %s %s' % (CMD_AUTH, AUTH_PLAIN, cren))
+            code, resp = self.cmd(f'{CMD_AUTH} {AUTH_PLAIN} {cren}')
         elif AUTH_LOGIN in auths:
-            code, resp = self.cmd("%s %s %s" % (CMD_AUTH, AUTH_LOGIN, b64(username)[:-1].decode()))
+            code, resp = self.cmd(f"{CMD_AUTH} {AUTH_LOGIN} {b64(username)[:-1].decode()}")
             assert code==334, 'wrong username %d, %s' % (code, resp)
             code, resp = self.cmd(b64(password)[:-1].decode())
         else:
-            raise Exception("auth(%s) not supported " % ', '.join(auths))
+            raise Exception(f"auth({', '.join(auths)}) not supported ")
 
-        assert code==235 or code==503, 'auth error %d, %s' % (code, resp)
+        assert code in [235, 503], 'auth error %d, %s' % (code, resp)
         return code, resp
 
     def to(self, addrs, mail_from=None):
-        mail_from = self.username if mail_from==None else mail_from
-        code, resp = self.cmd(CMD_EHLO + ' ' + LOCAL_DOMAIN)
+        mail_from = self.username if mail_from is None else mail_from
+        code, resp = self.cmd(f'{CMD_EHLO} {LOCAL_DOMAIN}')
         assert code==250, '%d' % code
-        code, resp = self.cmd('MAIL FROM: <%s>' % mail_from)
+        code, resp = self.cmd(f'MAIL FROM: <{mail_from}>')
         assert code==250, 'sender refused %d, %s' % (code, resp)
 
         if isinstance(addrs, str):
             addrs = [addrs]
         count = 0
         for addr in addrs:
-            code, resp = self.cmd('RCPT TO: <%s>' % addr)
-            if code!=250 and code!=251:
-                print('%s refused, %s' % (addr, resp))
+            code, resp = self.cmd(f'RCPT TO: <{addr}>')
+            if code not in [250, 251]:
+                print(f'{addr} refused, {resp}')
                 count += 1
         assert count!=len(addrs), 'recipient refused, %d, %s' % (code, resp)
 
