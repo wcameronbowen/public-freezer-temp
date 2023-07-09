@@ -1,19 +1,24 @@
-from machine import Pin, ADC
-from time import sleep
-import onewire, ds18x20, network, umail, random, utime
+from machine import Pin, ADC, reset
+from utime import sleep
+import onewire, ds18x20, network, umail, random
 import urequests as requests
 import secrets
 
 def check_temp():
-    ow = onewire.OneWire(Pin(28))
-    ds = ds18x20.DS18X20(ow)
-    roms = ds.scan()
-    ds.convert_temp()
-    sleep(1)
-    for rom in roms:
-        return ds.read_temp(rom)
+    try:
+        ow = onewire.OneWire(Pin(28))
+        ds = ds18x20.DS18X20(ow)
+        roms = ds.scan()
+        ds.convert_temp()
+        sleep(1)
+        for rom in roms:
+            return ds.read_temp(rom)
+    except Exception:
+        print("error reading temp")
+        return 999 
     
 def connect(ssid, password):
+    led.value(1)
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
     wlan.connect(ssid, password)
@@ -22,6 +27,7 @@ def connect(ssid, password):
         sleep(1)
     ip = wlan.ifconfig()[0]
     print(f'Connected on {ip}')
+    led.value(0)
     return ip
 
 def send_email(smtp, message):
@@ -96,34 +102,34 @@ def get_vsys():
     return round( battery_voltage / sample_count, 2)
 
 def _read_vsys_voltage():
-    adc_Vsys = machine.ADC(3)
+    adc_Vsys = ADC(3)
     ADC_VOLT_CONVERSATION = 3.3 / 65535
     return adc_Vsys.read_u16() * 3.0 * ADC_VOLT_CONVERSATION
 
 def write_to_file(filename, data):
-    led = Pin('WL_GPIO0', Pin.OUT)
     file = open(filename, 'w')
     led.value(1)
-    file.write(str(data) + ',')
+    file.write(f'{str(data)},')
     file.flush()
     led.value(0)
 
 # start loop and init variables
 try:
     fileid = random.randrange(10000)
-    tempfile = str(fileid) + '-tempdata.txt'
-    capacityfile = str(fileid) + '-capacitydata.txt'
+    tempfile = f'{fileid}-tempdata.txt'
+    capacityfile = f'{fileid}-capacitydata.txt'
+    led = Pin('WL_GPIO0', Pin.OUT)
     while True:
         x = check_temp()
         c,p = check_power()
-        write_to_file(tempfile, x)
-        write_to_file(capacityfile, p)
+        #write_to_file(tempfile, x)
+        #write_to_file(capacityfile, p)
         if c == 0 or x > 30.0:
             if c == 0:
                 message = f"temp is {x}, battery is not charging, capacity is {p}%" 
             else:
                 message = f"temp is {x}, battery is charging, capacity is {p}%"
-            send_sms(secrets.var_sms, message)
+            #send_sms(secrets.var_sms, message)
             send_email(secrets.var_smtp, message)
             sleep(1800)
         else:
@@ -131,4 +137,4 @@ try:
             print(message)
         sleep(60)
 except KeyboardInterrupt:
-    machine.reset()
+    reset()

@@ -14,13 +14,13 @@ AUTH_LOGIN = 'LOGIN'
 
 class SMTP:
     def cmd(self, cmd_str):
-        sock = self._sock;
+        sock = self._sock
         sock.write('%s\r\n' % cmd_str)
         resp = []
-        next = True
-        while next:
+        next_resp = True
+        while next_resp:
             code = sock.read(3)
-            next = sock.read(1) == b'-'
+            next_resp = sock.read(1) == b'-'
             resp.append(sock.readline().strip().decode())
         return int(code), resp
 
