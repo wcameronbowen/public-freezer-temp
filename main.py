@@ -15,8 +15,8 @@ def check_temp():
             return ds.read_temp(rom)
     except Exception:
         print("error reading temp")
-        return 999 
-    
+        return 999
+
 def connect(ssid, password):
     led.value(1)
     wlan = network.WLAN(network.STA_IF)
@@ -32,7 +32,7 @@ def connect(ssid, password):
 
 def send_email(smtp, message):
     connect(secrets.var_ssid, secrets.var_password)
-    
+
     for email in smtp['recipient_email']:
         s = umail.SMTP('smtp.gmail.com', 465, ssl=True)
         s.login(smtp["sender_email"], smtp["sender_app_password"])
@@ -50,7 +50,7 @@ def send_email(smtp, message):
 def send_sms(sms, message):
     connect(secrets.var_ssid, secrets.var_password)
 
-    for number in sms['recipient_num']:  
+    for number in sms['recipient_num']:
         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
         data = f"To={number}&From={sms['sender_num']}&Body={message}"
         url = f"https://api.twilio.com/2010-04-01/Accounts/{sms['account_sid']}/Messages.json"
@@ -72,7 +72,7 @@ def send_sms(sms, message):
 def check_power():
     # This is specific to reading voltage from a LiPo battery connected to a Raspberry Pi Pico W via Pico Lipo SHIM
     # and uses this reading to calculate how much charge is left in the battery.
-    # pico w requires setting pin 25 to high in order to measure vsys on ping 29 
+    # pico w requires setting pin 25 to high in order to measure vsys on ping 29
 
     charging = Pin('WL_GPIO2', Pin.IN)
 
@@ -80,21 +80,21 @@ def check_power():
     # your mileage may vary
     full_battery = 4.2
     empty_battery = 3.0
-    
+
     voltage = get_vsys()
     percentage = 100 * ((voltage - empty_battery) / (full_battery - empty_battery))
     if percentage > 100:
         percentage = 100.00
-    
+
     return charging.value(),percentage
 
 def get_vsys():
-    # pico w requires setting pin 25 to high in order to measure vsys on ping 29 
+    # pico w requires setting pin 25 to high in order to measure vsys on ping 29
     Pin(25, mode=Pin.OUT, pull=Pin.PULL_DOWN).high()
-        
+
     # Reconfigure pin 29 as an input.
     Pin(29, Pin.IN)
-        
+
     sample_count = 10
     battery_voltage = 0
     for _ in range(sample_count):
@@ -120,20 +120,21 @@ try:
     capacityfile = f'{fileid}-capacitydata.txt'
     led = Pin('WL_GPIO0', Pin.OUT)
     while True:
-        x = check_temp()
+        t = check_temp()
         c,p = check_power()
-        #write_to_file(tempfile, x)
+        #write_to_file(tempfile, t)
         #write_to_file(capacityfile, p)
-        if c == 0 or x > 30.0:
+        if c == 0 or t > -15.0:
             if c == 0:
-                message = f"temp is {x}, battery is not charging, capacity is {p}%" 
+                message = f"temp is {t}, battery is not charging, capacity is {p}%"
             else:
-                message = f"temp is {x}, battery is charging, capacity is {p}%"
+                message = f"temp is {t}, battery is charging, capacity is {p}%"
+            print(message)
             #send_sms(secrets.var_sms, message)
             send_email(secrets.var_smtp, message)
             sleep(1800)
         else:
-            message = f"temp is {x}, battery is charging, capacity is {p}%"
+            message = f"temp is {t}, battery is charging, capacity is {p}%"
             print(message)
         sleep(60)
 except KeyboardInterrupt:
