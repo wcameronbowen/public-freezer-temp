@@ -25,9 +25,8 @@ device_folder = glob.glob(base_dir + '28*')[0]
 device_file = device_folder + '/w1_slave'
 
 def read_temp_raw():
-    f = open(device_file, 'r')
-    lines = f.readlines()
-    f.close()
+    with open(device_file, 'r') as f:
+        lines = f.readlines()
     return lines
 
 def read_temp():
@@ -57,12 +56,11 @@ user1Email='someemail'
 user2Email='someemail'
 
 def sendText(x):
-
-        try:
-                client.api.account.messages.create(
-                        to=x,
-                        from_="+",
-                        body="""
+    try:
+        client.api.account.messages.create(
+            to=x,
+            from_="+",
+            body="""
 
 The freezer is critically hot.
 The temperature is %sF.
@@ -72,9 +70,8 @@ The temperature is %sC.
 
                 print("Text sent!")
         
-        except: 
+     except: 
                 print("Text not sent!")
-
 
 
 def sendEmail(x,y):
