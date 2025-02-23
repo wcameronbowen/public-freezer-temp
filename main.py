@@ -44,7 +44,6 @@ def send_email(smtp, message):
 
         s.send()
         print("Email sent!")
-        # Quit the email session
         s.quit()
 
 def send_sms(sms, message):
@@ -114,28 +113,22 @@ def write_to_file(filename, data):
     led.value(0)
 
 # start loop and init variables
-try:
-    fileid = random.randrange(10000)
-    tempfile = f'{fileid}-tempdata.txt'
-    capacityfile = f'{fileid}-capacitydata.txt'
-    led = Pin('WL_GPIO0', Pin.OUT)
-    while True:
-        t = check_temp()
-        c,p = check_power()
-        #write_to_file(tempfile, t)
-        #write_to_file(capacityfile, p)
-        if c == 0 or t > -15.0:
-            if c == 0:
-                message = f"temp is {t}, battery is not charging, capacity is {p}%"
-            else:
-                message = f"temp is {t}, battery is charging, capacity is {p}%"
-            print(message)
-            #send_sms(secrets.var_sms, message)
-            send_email(secrets.var_smtp, message)
-            sleep(1800)
+fileid = random.randrange(10000)
+tempfile = f'{fileid}-tempdata.txt'
+capacityfile = f'{fileid}-capacitydata.txt'
+led = Pin('WL_GPIO0', Pin.OUT)
+while True:
+    t = check_temp()
+    c,p = check_power()
+    if c == 0 or t > -15.0:
+        if c == 0:
+            message = f"temp is {t}, battery is not charging, capacity is {p}%"
         else:
             message = f"temp is {t}, battery is charging, capacity is {p}%"
-            print(message)
-        sleep(60)
-except KeyboardInterrupt:
-    reset()
+        print(message)
+        send_email(secrets.var_smtp, message)
+        sleep(1800)
+    else:
+        message = f"temp is {t}, battery is charging, capacity is {p}%"
+        print(message)
+    sleep(60)
